@@ -24,9 +24,9 @@ jobs:
   skip_conditions:
     runs-on: ubuntu-latest
     outputs:
-      no_code_changes: ${{ steps.has_code_changes.outputs.should_skip }}
+      no_code_changes: ${{ steps.version_only_change.outputs.should_skip }}
     steps:
-    - id: has_code_changes
+    - id: version_only_change
       uses: fkirc/skip-duplicate-actions@v5
       with:
         paths_ignore: '["unstructured/__version__.py", "CHANGELOG.md"]'
