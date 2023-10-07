@@ -179,6 +179,10 @@ jobs:
     needs: [setup, skip_conditions, lint]
     if: needs.skip_conditions.outputs.no_code_changes == 'false'
     steps:
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
       - run: |
           echo "Success running unit tests"
           version=$(python --version 2>&1)
