@@ -193,12 +193,12 @@ jobs:
           fi
 
   test_unit_result: # report the final result of the test_unit job, so that it can be properly skipped as needed
-    if: needs.skip_conditions.outputs.no_code_changes == 'false'
+    if: always()
     runs-on: ubuntu-latest
     needs:
       - skip_conditions
       - test_unit
     steps:
       - name: Mark result as failed
-        if: needs.test_unit.result != 'success'
+        if: needs.skip_conditions.outputs.no_code_changes == 'false' && needs.test_unit.result != 'success'
         run: exit 1
