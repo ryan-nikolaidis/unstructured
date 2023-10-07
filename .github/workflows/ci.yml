@@ -80,7 +80,7 @@ jobs:
     - name: Check for dependency conflicts
       run: |
         source .venv/bin/activate
-        make check_deps
+        make check-deps
 
   check_deps_result: # report the final result of the check_deps job, so that it can be properly skipped as needed
     if: needs.skip_conditions.outputs.no_code_changes == 'false'
@@ -122,7 +122,8 @@ jobs:
     - name: Lint
       run: |
         source .venv/bin/activate
-        make check
+        make check-src
+        make check-tests 
 
   lint_result: # report the final result of the lint job, so that it can be properly skipped as needed
     if: needs.skip_conditions.outputs.no_code_changes == 'false'
@@ -134,6 +135,14 @@ jobs:
       - name: Mark result as failed
         if: needs.lint.result != 'success'
         run: exit 1
+
+  check_version:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Check Version
+      run: |
+        make check-version
 
   changelog:
     runs-on: ubuntu-latest
