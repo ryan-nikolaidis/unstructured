@@ -83,7 +83,7 @@ jobs:
         make check-deps
 
   check-deps_result: # report the final result of the check-deps job, so that it can be properly skipped as needed
-    if: needs.pre-job.outputs.should_skip != 'true' && always()
+    if: needs.pre-job.outputs.skip_no_code_changes == 'false'
     runs-on: ubuntu-latest
     needs:
       - pre-job
@@ -125,7 +125,7 @@ jobs:
         make check
 
   lint_result: # report the final result of the lint job, so that it can be properly skipped as needed
-    if: needs.pre-job.outputs.should_skip != 'true' && always()
+    if: needs.pre-job.outputs.skip_no_code_changes == 'false'
     runs-on: ubuntu-latest
     needs:
       - pre-job
@@ -156,7 +156,7 @@ jobs:
           echo "Success running unit tests"
 
   test_unit_result: # report the final result of the test_unit job, so that it can be properly skipped as needed
-    if: needs.pre-job.outputs.skip_no_code_changes != 'true' && always()
+    if: needs.pre-job.outputs.skip_no_code_changes == 'false'
     runs-on: ubuntu-latest
     needs:
       - pre-job
