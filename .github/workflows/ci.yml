@@ -12,10 +12,10 @@ env:
   GHA_CACHE_KEY_VERSION: "v1"
 
 jobs:
-  pre-job:
+  skip_conditions:
     runs-on: ubuntu-latest
     outputs:
-      skip_no_code_changes: ${{ steps.has_code_changes.outputs.should_skip }}
+      no_code_changes: ${{ steps.has_code_changes.outputs.should_skip }}
     steps:
     - id: has_code_changes
       uses: fkirc/skip-duplicate-actions@v5
@@ -23,8 +23,8 @@ jobs:
         paths_ignore: '["unstructured/__version__.py", "CHANGELOG.md"]'
         
   setup:
-    needs: pre-job
-    if: needs.pre-job.outputs.skip_no_code_changes == 'false'
+    needs: skip_conditions
+    if: needs.skip_conditions.outputs.no_code_changes == 'false'
     strategy:
       matrix:
         python-version: ["3.8","3.9","3.10","3.11"]
@@ -51,13 +51,13 @@ jobs:
         [ ! -d "$NLTK_DATA" ] && mkdir "$NLTK_DATA"
         make install-ci
 
-  check-deps:
+  check_deps:
     strategy:
       matrix:
         python-version: ["3.8","3.9","3.10","3.11"]
     runs-on: ubuntu-latest
-    needs: [setup, pre-job]
-    if: needs.pre-job.outputs.skip_no_code_changes == 'false'
+    needs: [setup, skip_conditions]
+    if: needs.skip_conditions.outputs.no_code_changes == 'false'
     steps:
     - uses: actions/checkout@v3
     - uses: actions/cache/restore@v3
@@ -80,17 +80,17 @@ jobs:
     - name: Check for dependency conflicts
       run: |
         source .venv/bin/activate
-        make check-deps
+        make check_deps
 
-  check-deps_result: # report the final result of the check-deps job, so that it can be properly skipped as needed
-    if: needs.pre-job.outputs.skip_no_code_changes == 'false'
+  check_deps_result: # report the final result of the check_deps job, so that it can be properly skipped as needed
+    if: needs.skip_conditions.outputs.no_code_changes == 'false'
     runs-on: ubuntu-latest
     needs:
-      - pre-job
-      - check-deps
+      - skip_conditions
+      - check_deps
     steps:
       - name: Mark result as failed
-        if: needs.check-deps.result != 'success'
+        if: needs.check_deps.result != 'success'
         run: exit 1
 
   lint:
@@ -98,8 +98,8 @@ jobs:
       matrix:
         python-version: ["3.8","3.9","3.10","3.11"]
     runs-on: ubuntu-latest
-    needs: [setup, pre-job]
-    if: needs.pre-job.outputs.skip_no_code_changes == 'false'
+    needs: [setup, skip_conditions]
+    if: needs.skip_conditions.outputs.no_code_changes == 'false'
     steps:
     - uses: actions/checkout@v3
     - uses: actions/cache/restore@v3
@@ -125,18 +125,36 @@ jobs:
         make check
 
   lint_result: # report the final result of the lint job, so that it can be properly skipped as needed
-    if: needs.pre-job.outputs.skip_no_code_changes == 'false'
+    if: needs.skip_conditions.outputs.no_code_changes == 'false'
     runs-on: ubuntu-latest
     needs:
-      - pre-job
+      - skip_conditions
       - lint
     steps:
       - name: Mark result as failed
         if: needs.lint.result != 'success'
         run: exit 1
 
+  changelog:
+    runs-on: ubuntu-latest
+    steps:
+    # need to checkout otherwise paths-filter will fail on merge-queue trigger 
+    - uses: actions/checkout@v3
+    - if: github.ref != 'refs/heads/main'
+      uses: dorny/paths-filter@v2
+      id: changes
+      with:
+        filters: |
+          src:
+            - 'unstructured/**'
+
+    - if: steps.changes.outputs.src == 'true' && github.ref != 'refs/heads/main'
+      uses: dangoslen/changelog-enforcer@v3
+
   shellcheck:
     runs-on: ubuntu-latest
+    needs: [skip_conditions]
+    if: needs.skip_conditions.outputs.no_code_changes == 'false'
     steps:
       - uses: actions/checkout@v3
       - name: ShellCheck
@@ -149,17 +167,18 @@ jobs:
     runs-on: ubuntu-latest
     env:
       NLTK_DATA: ${{ github.workspace }}/nltk_data
-    needs: [setup, pre-job, lint]
-    if: needs.pre-job.outputs.skip_no_code_changes == 'false'
+    needs: [setup, skip_conditions, lint]
+    if: needs.skip_conditions.outputs.no_code_changes == 'false'
     steps:
       - run: |
           echo "Success running unit tests"
+          exit 1
 
   test_unit_result: # report the final result of the test_unit job, so that it can be properly skipped as needed
-    if: needs.pre-job.outputs.skip_no_code_changes == 'false'
+    if: needs.skip_conditions.outputs.no_code_changes == 'false'
     runs-on: ubuntu-latest
     needs:
-      - pre-job
+      - skip_conditions
       - test_unit
     steps:
       - name: Mark result as failed
