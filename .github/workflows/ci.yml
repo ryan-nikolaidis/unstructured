@@ -148,7 +148,7 @@ jobs:
           echo "Python version: $version"
           if [[ "$version" == "Python 3.8"* ]]; then
             echo "Not Python 3.8"
-            exit 0
+            exit 1
           fi
 
   test_unit_result: # report the final result of the test_unit job, so that it can be properly skipped as needed
